@@ -43,4 +43,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.of(HttpStatus.CONFLICT.value(), DUPLICATE_DATA, null));
     }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Void>> handleException(Exception e, HttpServletRequest request){
+        log.error("[UnhandledException] {} {}", request.getMethod(), request.getRequestURI(), e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.of(HttpStatus.INTERNAL_SERVER_ERROR.value(), INTERNAL_SERVER_ERROR, null));
+    }
 }
