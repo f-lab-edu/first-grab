@@ -6,6 +6,7 @@ import lombok.Getter;
 public class ApiResponse<T> {
 
     public static final String SIGNUP_SUCCESS = "회원가입이 완료되었습니다.";
+    public static final String LOGIN_SUCCESS = "로그인이 완료되었습니다.";
 
     private int status;
     private String message;
