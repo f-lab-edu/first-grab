@@ -1,8 +1,8 @@
 package com.firstgrab.domain.user.service;
 
-import com.firstgrab.domain.user.controller.dto.SignupRequestDTO;
 import com.firstgrab.domain.user.entity.User;
 import com.firstgrab.domain.user.repository.UserRepository;
+import com.firstgrab.domain.user.service.dto.SignupCommand;
 import com.firstgrab.global.exception.DuplicateException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,11 +33,11 @@ public class UserServiceTest {
     @Test
     @DisplayName("회원가입 성공")
     void signupSuccess() {
-        SignupRequestDTO signupRequestDTO = new SignupRequestDTO("test@test.com", "12345678", "홍길동");
-        when(userRepository.findByEmail(signupRequestDTO.getEmail())).thenReturn(Optional.empty());
-        when(passwordEncoder.encode(signupRequestDTO.getPassword())).thenReturn("encodedPassword");
+        SignupCommand signupCommand = new SignupCommand("test@test.com", "12345678", "홍길동");
+        when(userRepository.findByEmail(signupCommand.getEmail())).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(signupCommand.getPassword())).thenReturn("encodedPassword");
 
-        userService.signup(signupRequestDTO);
+        userService.signup(signupCommand);
 
         verify(userRepository, times(1)).save(any(User.class));
     }
@@ -45,11 +45,11 @@ public class UserServiceTest {
     @Test
     @DisplayName("이메일 중복 시 DuplicateException")
     void signupDuplicateEmail() {
-        SignupRequestDTO signupRequestDTO = new SignupRequestDTO("test@test.com", "12345678", "홍길동");
-        when(userRepository.findByEmail(signupRequestDTO.getEmail())).thenReturn(Optional.of(mock(User.class)));
+        SignupCommand signupCommand = new SignupCommand("test@test.com", "12345678", "홍길동");
+        when(userRepository.findByEmail(signupCommand.getEmail())).thenReturn(Optional.of(mock(User.class)));
 
         assertThrows(DuplicateException.class, () -> {
-            userService.signup(signupRequestDTO);
+            userService.signup(signupCommand);
         });
 
         verify(userRepository, times(0)).save(any(User.class));

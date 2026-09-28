@@ -2,6 +2,7 @@ package com.firstgrab.domain.user.controller;
 
 import com.firstgrab.domain.user.controller.dto.SignupRequestDTO;
 import com.firstgrab.domain.user.service.UserService;
+import com.firstgrab.domain.user.service.dto.SignupCommand;
 import com.firstgrab.global.exception.DuplicateException;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -50,7 +51,7 @@ public class UserControllerTest {
         SignupRequestDTO signupRequestDTO = new SignupRequestDTO("test@test.com", "12345678", "홍길동");
         String json = new ObjectMapper().writeValueAsString(signupRequestDTO);
         doThrow(new DuplicateException("중복된 이메일입니다."))
-                .when(userService).signup(any(SignupRequestDTO.class));
+                .when(userService).signup(any(SignupCommand.class));
 
         mockMvc.perform(post("/api/auth/signup")
                         .with(csrf())
@@ -75,5 +76,4 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").value("must not be blank"));
     }
-
 }

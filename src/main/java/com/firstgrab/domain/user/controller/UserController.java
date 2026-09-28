@@ -21,7 +21,7 @@ public class UserController {
 
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<Void>> signup(@Valid @RequestBody SignupRequestDTO signupRequestDTO) {
-        userService.signup(signupRequestDTO);
+        userService.signup(signupRequestDTO.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.of(201, ApiResponse.SIGNUP_SUCCESS, null));
     }
