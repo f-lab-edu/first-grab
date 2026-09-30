@@ -2,8 +2,11 @@ package com.firstgrab.domain.user.controller;
 
 import com.firstgrab.domain.user.controller.dto.SignupRequestDTO;
 import com.firstgrab.domain.user.service.UserService;
+import com.firstgrab.domain.user.service.dto.LoginCommand;
+import com.firstgrab.domain.user.service.dto.LoginResult;
 import com.firstgrab.domain.user.service.dto.SignupCommand;
 import com.firstgrab.global.exception.DuplicateException;
+import com.firstgrab.global.exception.UnauthorizedException;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
@@ -19,6 +22,10 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import static com.firstgrab.global.response.ApiResponse.LOGIN_SUCCESS;
+import static com.firstgrab.global.response.ApiResponse.SIGNUP_SUCCESS;
+import static com.firstgrab.global.exception.ErrorMessage.INVALID_LOGIN;
 
 @WebMvcTest(UserController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -42,7 +49,7 @@ public class UserControllerTest {
                         .content(json))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value(201))
-                .andExpect(jsonPath("$.message").value("회원가입이 완료되었습니다."));
+                .andExpect(jsonPath("$.message").value(SIGNUP_SUCCESS));
     }
 
     @Test
@@ -75,5 +82,55 @@ public class UserControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").value("must not be blank"));
+    }
+
+    @Test
+    @DisplayName("로그인 성공")
+    void loginSuccess() throws Exception {
+        String json = """
+                {"email": "test@test.com", "password": "12345678"}
+                """;
+        when(userService.login(any(LoginCommand.class))).thenReturn(new LoginResult("accessToken"));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value(LOGIN_SUCCESS))
+                .andExpect(jsonPath("$.data.accessToken").value("accessToken"));
+    }
+
+    @Test
+    @DisplayName("로그인 실패 시 401")
+    void loginUnauthorized() throws Exception {
+        String json = """
+                {"email": "test@test.com", "password": "wrongPassword"}
+                """;
+        when(userService.login(any(LoginCommand.class))).thenThrow(new UnauthorizedException(INVALID_LOGIN));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value(INVALID_LOGIN));
+    }
+
+    @Test
+    @DisplayName("로그인 시 이메일 미입력이면 400 ")
+    void loginBlankEmail() throws Exception {
+        String json = """
+                {"email": "", "password": "12345678"}
+                """;
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("must not be blank"));
+
+        verifyNoInteractions(userService);
     }
 }
