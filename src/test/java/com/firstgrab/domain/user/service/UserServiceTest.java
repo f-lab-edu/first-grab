@@ -20,8 +20,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static com.firstgrab.global.exception.ErrorMessage.DUPLICATE_EMAIL;
+import static com.firstgrab.global.exception.ErrorMessage.INVALID_LOGIN;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -63,11 +65,11 @@ public class UserServiceTest {
         SignupCommand signupCommand = new SignupCommand(EMAIL, RAW_PASSWORD, NAME);
         when(userRepository.findByEmail(signupCommand.getEmail())).thenReturn(Optional.of(mock(User.class)));
 
-        assertThrows(DuplicateException.class, () -> {
-            userService.signup(signupCommand);
-        });
+        assertThatThrownBy(() -> userService.signup(signupCommand))
+                .isInstanceOf(DuplicateException.class)
+                .hasMessage(DUPLICATE_EMAIL);
 
-        verify(userRepository, times(0)).save(any(User.class));
+        verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
@@ -80,7 +82,7 @@ public class UserServiceTest {
 
         LoginResult result = userService.login(new LoginCommand(EMAIL, RAW_PASSWORD));
 
-        assertEquals("accessToken", result.getAccessToken());
+        assertThat(result.getAccessToken()).isEqualTo("accessToken");
     }
 
     @Test
@@ -88,8 +90,9 @@ public class UserServiceTest {
     void loginUserNotFound() {
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
 
-        assertThrows(UnauthorizedException.class,
-                () -> userService.login(new LoginCommand(EMAIL, RAW_PASSWORD)));
+        assertThatThrownBy(() -> userService.login(new LoginCommand(EMAIL, RAW_PASSWORD)))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessage(INVALID_LOGIN);
 
         verifyNoInteractions(jwtProvider);
     }
@@ -101,8 +104,9 @@ public class UserServiceTest {
         when(deletedUser.getDeletedAt()).thenReturn(LocalDateTime.now());
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(deletedUser));
 
-        assertThrows(UnauthorizedException.class,
-                () -> userService.login(new LoginCommand(EMAIL, RAW_PASSWORD)));
+        assertThatThrownBy(() -> userService.login(new LoginCommand(EMAIL, RAW_PASSWORD)))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessage(INVALID_LOGIN);
 
         verifyNoInteractions(passwordEncoder, jwtProvider);
     }
@@ -114,8 +118,9 @@ public class UserServiceTest {
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(RAW_PASSWORD, ENCODED_PASSWORD)).thenReturn(false);
 
-        assertThrows(UnauthorizedException.class,
-                () -> userService.login(new LoginCommand(EMAIL, RAW_PASSWORD)));
+        assertThatThrownBy(() -> userService.login(new LoginCommand(EMAIL, RAW_PASSWORD)))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessage(INVALID_LOGIN);
 
         verifyNoInteractions(jwtProvider);
     }

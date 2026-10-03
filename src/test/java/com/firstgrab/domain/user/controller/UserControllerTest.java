@@ -17,6 +17,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
+import static com.firstgrab.global.exception.ErrorMessage.DUPLICATE_EMAIL;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -57,7 +58,7 @@ public class UserControllerTest {
     void signupDuplicateEmail() throws Exception {
         SignupRequestDTO signupRequestDTO = new SignupRequestDTO("test@test.com", "12345678", "홍길동");
         String json = new ObjectMapper().writeValueAsString(signupRequestDTO);
-        doThrow(new DuplicateException("중복된 이메일입니다."))
+        doThrow(new DuplicateException(DUPLICATE_EMAIL))
                 .when(userService).signup(any(SignupCommand.class));
 
         mockMvc.perform(post("/api/auth/signup")
@@ -66,7 +67,7 @@ public class UserControllerTest {
                         .content(json))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.message").value("중복된 이메일입니다."));
+                .andExpect(jsonPath("$.message").value(DUPLICATE_EMAIL));
     }
 
     @Test
