@@ -17,6 +17,7 @@ class JwtProviderTest {
     private static final String OTHER_SECRET =
             Encoders.BASE64.encode("other-secret-key-for-jwt-provider-test".getBytes());
     private static final long EXPIRATION = 3_600_000L;
+    private static final long REFRESH_EXPIRATION = 1_209_600_000L;
     private static final Long USER_ID = 1L;
     private static final Role ROLE = Role.USER;
 
@@ -24,7 +25,7 @@ class JwtProviderTest {
 
     @BeforeEach
     void setUp() {
-        jwtProvider = new JwtProvider(SECRET, EXPIRATION);
+        jwtProvider = new JwtProvider(SECRET, EXPIRATION, REFRESH_EXPIRATION);
     }
 
     @Test
@@ -40,7 +41,7 @@ class JwtProviderTest {
     @Test
     @DisplayName("만료된 토큰이면 empty를 반환")
     void parseExpired() {
-        JwtProvider expiredProvider = new JwtProvider(SECRET, -1000L);
+        JwtProvider expiredProvider = new JwtProvider(SECRET, -1000L, REFRESH_EXPIRATION);
         String token = expiredProvider.createAccessToken(USER_ID, ROLE);
 
         assertThat(jwtProvider.parseToken(token)).isEmpty();
@@ -49,7 +50,7 @@ class JwtProviderTest {
     @Test
     @DisplayName("다른 키로 서명한 토큰이면 empty를 반환")
     void parseInvalidSignature() {
-        JwtProvider otherProvider = new JwtProvider(OTHER_SECRET, EXPIRATION);
+        JwtProvider otherProvider = new JwtProvider(OTHER_SECRET, EXPIRATION, REFRESH_EXPIRATION);
         String token = otherProvider.createAccessToken(USER_ID, ROLE);
 
         assertThat(jwtProvider.parseToken(token)).isEmpty();
@@ -66,5 +67,35 @@ class JwtProviderTest {
     void parseEmpty() {
         assertThat(jwtProvider.parseToken(null)).isEmpty();
         assertThat(jwtProvider.parseToken("")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("jwt 토큰 생성 후 파싱 성공")
+    void parseRefreshTokenSuccess() {
+        String token = jwtProvider.createRefreshToken(USER_ID);
+
+        Optional<Long> userId = jwtProvider.parseRefreshToken(token);
+
+        assertThat(userId).contains(USER_ID);
+    }
+
+    @Test
+    @DisplayName("refresh 토큰으로 parseToken 호출하면 empty 반환")
+    void parseTokenWithRefreshToken() {
+        String token = jwtProvider.createRefreshToken(USER_ID);
+
+        Optional<TokenClaims> result = jwtProvider.parseToken(token);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("access 토큰으로 parseRefreshToken 호출하면 empty 반환")
+    void parseRefreshTokenWithAccessToken() {
+        String token = jwtProvider.createAccessToken(USER_ID, ROLE);
+
+        Optional<Long> userId = jwtProvider.parseRefreshToken(token);
+
+        assertThat(userId).isEmpty();
     }
 }

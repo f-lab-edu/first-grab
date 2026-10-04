@@ -21,16 +21,22 @@ import java.util.Optional;
 public class JwtProvider {
 
     private static final String ROLE_CLAIM = "role";
+    private static final String TYPE_CLAIM = "type";
+    private static final String TYPE_ACCESS = "access";
+    private static final String TYPE_REFRESH = "refresh";
 
     private final SecretKey secretKey;
     private final JwtParser jwtParser;
     private final long accessTokenExpiration;
+    private final long refreshTokenExpiration;
 
     public JwtProvider(@Value("${jwt.secret}") String secret,
-                       @Value("${jwt.access-token-expiration}") long accessTokenExpiration) {
+                       @Value("${jwt.access-token-expiration}") long accessTokenExpiration,
+                       @Value("${jwt.refresh-token-expiration}") long refreshTokenExpiration) {
         this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
         this.jwtParser = Jwts.parser().verifyWith(secretKey).build();
         this.accessTokenExpiration = accessTokenExpiration;
+        this.refreshTokenExpiration = refreshTokenExpiration;
     }
 
     public String createAccessToken(Long userId, Role role) {
@@ -40,6 +46,20 @@ public class JwtProvider {
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim(ROLE_CLAIM, role.name())
+                .claim(TYPE_CLAIM, TYPE_ACCESS)
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(secretKey)
+                .compact();
+    }
+
+    public String createRefreshToken(Long userId){
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + refreshTokenExpiration);
+
+        return Jwts.builder()
+                .subject(String.valueOf(userId))
+                .claim(TYPE_CLAIM, TYPE_REFRESH)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(secretKey)
@@ -47,9 +67,19 @@ public class JwtProvider {
     }
 
     public Optional<TokenClaims> parseToken(String token) {
+        return parseClaims(token).filter(claims -> claims.get(TYPE_CLAIM, String.class).equals(TYPE_ACCESS))
+                    .map(this::toTokenClaims);
+    }
+
+    public Optional<Long> parseRefreshToken(String token) {
+        return parseClaims(token).filter(claims -> claims.get(TYPE_CLAIM, String.class).equals(TYPE_REFRESH))
+                .map(claims -> Long.valueOf(claims.getSubject()));
+    }
+
+    private Optional<Claims> parseClaims(String token){
         try {
             Claims claims = jwtParser.parseSignedClaims(token).getPayload();
-            return Optional.of(toTokenClaims(claims));
+            return Optional.of(claims);
         } catch (ExpiredJwtException e) {
             log.debug("[JwtException] Expired token");
         } catch (JwtException | IllegalArgumentException e) {
