@@ -9,6 +9,7 @@ import com.firstgrab.domain.user.service.dto.SignupCommand;
 import com.firstgrab.global.exception.DuplicateException;
 import com.firstgrab.global.exception.UnauthorizedException;
 import com.firstgrab.global.jwt.JwtProvider;
+import com.firstgrab.global.jwt.RefreshTokenRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +35,8 @@ public class UserServiceTest {
     private static final String EMAIL = "test@test.com";
     private static final String RAW_PASSWORD = "12345678";
     private static final String ENCODED_PASSWORD = "encodedPassword";
+    private static final String ACCESS_TOKEN = "accessToken";
+    private static final String REFRESH_TOKEN = "refreshToken";
 
     @InjectMocks
     private UserService userService;
@@ -47,6 +50,9 @@ public class UserServiceTest {
     @Mock
     private JwtProvider jwtProvider;
 
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+
     @Test
     @DisplayName("회원가입 성공")
     void signupSuccess() {
@@ -56,7 +62,7 @@ public class UserServiceTest {
 
         userService.signup(signupCommand);
 
-        verify(userRepository, times(1)).save(any(User.class));
+        verify(userRepository).save(any(User.class));
     }
 
     @Test
@@ -73,16 +79,20 @@ public class UserServiceTest {
     }
 
     @Test
-    @DisplayName("로그인 성공 시 accessToken 반환")
+    @DisplayName("로그인 성공 시 accessToken, refreshToken 반환 및 저장")
     void loginSuccess() {
         User user = User.createUser(EMAIL, ENCODED_PASSWORD, NAME);
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(RAW_PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
-        when(jwtProvider.createAccessToken(user.getId(), Role.USER)).thenReturn("accessToken");
+        when(jwtProvider.createAccessToken(user.getId(), Role.USER)).thenReturn(ACCESS_TOKEN);
+        when(jwtProvider.createRefreshToken(user.getId())).thenReturn(REFRESH_TOKEN);
 
         LoginResult result = userService.login(new LoginCommand(EMAIL, RAW_PASSWORD));
 
-        assertThat(result.getAccessToken()).isEqualTo("accessToken");
+        assertThat(result.getAccessToken()).isEqualTo(ACCESS_TOKEN);
+        assertThat(result.getRefreshToken()).isEqualTo(REFRESH_TOKEN);
+
+        verify(refreshTokenRepository).save(user.getId(), REFRESH_TOKEN);
     }
 
     @Test
@@ -94,7 +104,7 @@ public class UserServiceTest {
                 .isInstanceOf(UnauthorizedException.class)
                 .hasMessage(INVALID_LOGIN);
 
-        verifyNoInteractions(jwtProvider);
+        verifyNoInteractions(jwtProvider, refreshTokenRepository);
     }
 
     @Test
@@ -108,7 +118,7 @@ public class UserServiceTest {
                 .isInstanceOf(UnauthorizedException.class)
                 .hasMessage(INVALID_LOGIN);
 
-        verifyNoInteractions(passwordEncoder, jwtProvider);
+        verifyNoInteractions(passwordEncoder, jwtProvider, refreshTokenRepository);
     }
 
     @Test
@@ -122,7 +132,7 @@ public class UserServiceTest {
                 .isInstanceOf(UnauthorizedException.class)
                 .hasMessage(INVALID_LOGIN);
 
-        verifyNoInteractions(jwtProvider);
+        verifyNoInteractions(jwtProvider, refreshTokenRepository);
     }
 
 }
