@@ -2,6 +2,8 @@ package com.firstgrab.domain.user.controller;
 
 import com.firstgrab.domain.user.controller.dto.LoginRequestDTO;
 import com.firstgrab.domain.user.controller.dto.LoginResponseDTO;
+import com.firstgrab.domain.user.controller.dto.RefreshTokenRequestDTO;
+import com.firstgrab.domain.user.controller.dto.ReissueResponseDTO;
 import com.firstgrab.domain.user.controller.dto.SignupRequestDTO;
 import com.firstgrab.domain.user.service.UserService;
 import com.firstgrab.domain.user.service.dto.LoginResult;
@@ -34,5 +36,19 @@ public class UserController {
         LoginResult loginResult = userService.login(loginRequestDTO.toCommand());
         return ResponseEntity.status(HttpStatus.OK)
                 .body(ApiResponse.of(HttpStatus.OK.value(), ApiResponse.LOGIN_SUCCESS, LoginResponseDTO.from(loginResult)));
+    }
+
+    @PostMapping("/reissue")
+    public ResponseEntity<ApiResponse<ReissueResponseDTO>> reissue(@Valid @RequestBody RefreshTokenRequestDTO refreshTokenRequestDTO) {
+        String accessToken = userService.reissue(refreshTokenRequestDTO.getRefreshToken());
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.of(HttpStatus.OK.value(), ApiResponse.REISSUE_SUCCESS, ReissueResponseDTO.from(accessToken)));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(@Valid @RequestBody RefreshTokenRequestDTO refreshTokenRequestDTO) {
+        userService.logout(refreshTokenRequestDTO.getRefreshToken());
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.of(HttpStatus.OK.value(), ApiResponse.LOGOUT_SUCCESS, null));
     }
 }

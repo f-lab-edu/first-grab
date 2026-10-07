@@ -16,9 +16,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 import static com.firstgrab.global.exception.ErrorMessage.DUPLICATE_EMAIL;
 import static com.firstgrab.global.exception.ErrorMessage.INVALID_LOGIN;
+import static com.firstgrab.global.exception.ErrorMessage.INVALID_REFRESH_TOKEN;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -76,5 +76,39 @@ public class UserService {
         if (!passwordEncoder.matches(inputPassword, password)) {
             throw new UnauthorizedException(INVALID_LOGIN);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public String reissue(String refreshToken) {
+        Long userId = getUserIdFromRefreshToken(refreshToken);
+        validateStoredRefreshToken(userId, refreshToken);
+        User user = getActiveUser(userId);
+        String accessToken = jwtProvider.createAccessToken(userId, user.getRole());
+        log.info("Access token reissued, userId={}", userId);
+        return accessToken;
+    }
+
+    private Long getUserIdFromRefreshToken(String refreshToken) {
+        return jwtProvider.parseRefreshToken(refreshToken)
+                .orElseThrow(() -> new UnauthorizedException(INVALID_REFRESH_TOKEN));
+    }
+
+    private void validateStoredRefreshToken(Long userId, String refreshToken) {
+        refreshTokenRepository.findByUserId(userId)
+                .filter(token -> token.equals(refreshToken))
+                .orElseThrow(() -> new UnauthorizedException(INVALID_REFRESH_TOKEN));
+    }
+
+    private User getActiveUser(Long userId) {
+        return userRepository.findById(userId)
+                .filter(user -> user.getDeletedAt() == null)
+                .orElseThrow(() -> new UnauthorizedException(INVALID_REFRESH_TOKEN));
+    }
+
+    public void logout(String refreshToken) {
+        Long userId = getUserIdFromRefreshToken(refreshToken);
+        validateStoredRefreshToken(userId, refreshToken);
+        refreshTokenRepository.deleteByUserId(userId);
+        log.info("User logged out, userId={}", userId);
     }
 }
