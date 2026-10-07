@@ -24,6 +24,7 @@ import java.util.Optional;
 
 import static com.firstgrab.global.exception.ErrorMessage.DUPLICATE_EMAIL;
 import static com.firstgrab.global.exception.ErrorMessage.INVALID_LOGIN;
+import static com.firstgrab.global.exception.ErrorMessage.INVALID_REFRESH_TOKEN;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,6 +40,7 @@ public class UserServiceTest {
     private static final String ACCESS_TOKEN = "accessToken";
     private static final String REFRESH_TOKEN = "refreshToken";
     private static final String HASHED_REFRESH_TOKEN = "hashedRefreshToken";
+    private static final Long USER_ID = 1L;
 
     @InjectMocks
     private UserService userService;
@@ -141,4 +143,81 @@ public class UserServiceTest {
         verifyNoInteractions(jwtProvider, refreshTokenRepository);
     }
 
+    @Test
+    @DisplayName("accessToken 재발급 성공")
+    void reissueSuccess(){
+        User user = User.createUser(EMAIL, ENCODED_PASSWORD, NAME);
+        when(jwtProvider.parseRefreshToken(REFRESH_TOKEN)).thenReturn(Optional.of(USER_ID));
+        when(refreshTokenRepository.findByUserId(USER_ID)).thenReturn(Optional.of(REFRESH_TOKEN));
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(jwtProvider.createAccessToken(USER_ID,Role.USER)).thenReturn(ACCESS_TOKEN);
+
+        String accessToken = userService.reissue(REFRESH_TOKEN);
+
+        assertThat(accessToken).isEqualTo(ACCESS_TOKEN);
+    }
+
+    @Test
+    @DisplayName("refresh token 파싱 실패")
+    void reissueInvalidToken(){
+        when(jwtProvider.parseRefreshToken(REFRESH_TOKEN)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.reissue(REFRESH_TOKEN))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessage(INVALID_REFRESH_TOKEN);
+
+        verifyNoInteractions(refreshTokenRepository, userRepository);
+    }
+
+    @Test
+    @DisplayName("refreshToken이 redis에 저장되지 않았을 때")
+    void reissueTokenNotStored(){
+        when(jwtProvider.parseRefreshToken(REFRESH_TOKEN)).thenReturn(Optional.of(USER_ID));
+        when(refreshTokenRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.reissue(REFRESH_TOKEN))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessage(INVALID_REFRESH_TOKEN);
+
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    @DisplayName("refreshToken이 redis 값과 일치하지 않았을 때")
+    void reissueTokenMismatch(){
+        when(jwtProvider.parseRefreshToken(REFRESH_TOKEN)).thenReturn(Optional.of(USER_ID));
+        when(refreshTokenRepository.findByUserId(USER_ID)).thenReturn(Optional.of("INVALID_TOKEN"));
+
+        assertThatThrownBy(() -> userService.reissue(REFRESH_TOKEN))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessage(INVALID_REFRESH_TOKEN);
+
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    @DisplayName("탈퇴한 유저의 토큰 재발행")
+    void reissueDeletedUser(){
+        User user = mock(User.class);
+        when(jwtProvider.parseRefreshToken(REFRESH_TOKEN)).thenReturn(Optional.of(USER_ID));
+        when(refreshTokenRepository.findByUserId(USER_ID)).thenReturn(Optional.of(REFRESH_TOKEN));
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(user.getDeletedAt()).thenReturn(LocalDateTime.now());
+
+
+        assertThatThrownBy(() -> userService.reissue(REFRESH_TOKEN))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessage(INVALID_REFRESH_TOKEN);
+    }
+
+    @Test
+    @DisplayName("logout 성공")
+    void logoutSuccess(){
+        when(jwtProvider.parseRefreshToken(REFRESH_TOKEN)).thenReturn(Optional.of(USER_ID));
+        when(refreshTokenRepository.findByUserId(USER_ID)).thenReturn(Optional.of(REFRESH_TOKEN));
+
+        userService.logout(REFRESH_TOKEN);
+
+        verify(refreshTokenRepository).deleteByUserId(USER_ID);
+    }
 }
