@@ -21,16 +21,27 @@ import java.util.Optional;
 public class JwtProvider {
 
     private static final String ROLE_CLAIM = "role";
+    private static final String TYPE_CLAIM = "type";
+    private static final String TYPE_ACCESS = "access";
+    private static final String TYPE_REFRESH = "refresh";
 
-    private final SecretKey secretKey;
-    private final JwtParser jwtParser;
+    private final SecretKey accessSecretKey;
+    private final SecretKey refreshSecretKey;
+    private final JwtParser accessJwtParser;
+    private final JwtParser refreshJwtParser;
     private final long accessTokenExpiration;
+    private final long refreshTokenExpiration;
 
-    public JwtProvider(@Value("${jwt.secret}") String secret,
-                       @Value("${jwt.access-token-expiration}") long accessTokenExpiration) {
-        this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
-        this.jwtParser = Jwts.parser().verifyWith(secretKey).build();
+    public JwtProvider(@Value("${jwt.access-token-secret}") String accessSecret,
+                       @Value("${jwt.refresh-token-secret}") String refreshSecret,
+                       @Value("${jwt.access-token-expiration}") long accessTokenExpiration,
+                       @Value("${jwt.refresh-token-expiration}") long refreshTokenExpiration) {
+        this.accessSecretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(accessSecret));
+        this.refreshSecretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(refreshSecret));
+        this.accessJwtParser = Jwts.parser().verifyWith(accessSecretKey).build();
+        this.refreshJwtParser = Jwts.parser().verifyWith(refreshSecretKey).build();
         this.accessTokenExpiration = accessTokenExpiration;
+        this.refreshTokenExpiration = refreshTokenExpiration;
     }
 
     public String createAccessToken(Long userId, Role role) {
@@ -40,16 +51,42 @@ public class JwtProvider {
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim(ROLE_CLAIM, role.name())
+                .claim(TYPE_CLAIM, TYPE_ACCESS)
                 .issuedAt(now)
                 .expiration(expiry)
-                .signWith(secretKey)
+                .signWith(accessSecretKey)
+                .compact();
+    }
+
+    public String createRefreshToken(Long userId) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + refreshTokenExpiration);
+
+        return Jwts.builder()
+                .subject(String.valueOf(userId))
+                .claim(TYPE_CLAIM, TYPE_REFRESH)
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(refreshSecretKey)
                 .compact();
     }
 
     public Optional<TokenClaims> parseToken(String token) {
+        return parseClaims(accessJwtParser, token)
+                .filter(claims -> TYPE_ACCESS.equals(claims.get(TYPE_CLAIM, String.class)))
+                .map(this::toTokenClaims);
+    }
+
+    public Optional<Long> parseRefreshToken(String token) {
+        return parseClaims(refreshJwtParser, token)
+                .filter(claims -> TYPE_REFRESH.equals(claims.get(TYPE_CLAIM, String.class)))
+                .map(claims -> Long.valueOf(claims.getSubject()));
+    }
+
+    private Optional<Claims> parseClaims(JwtParser jwtParser, String token) {
         try {
             Claims claims = jwtParser.parseSignedClaims(token).getPayload();
-            return Optional.of(toTokenClaims(claims));
+            return Optional.of(claims);
         } catch (ExpiredJwtException e) {
             log.debug("[JwtException] Expired token");
         } catch (JwtException | IllegalArgumentException e) {
