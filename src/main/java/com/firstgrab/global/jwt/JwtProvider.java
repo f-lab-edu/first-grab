@@ -25,16 +25,21 @@ public class JwtProvider {
     private static final String TYPE_ACCESS = "access";
     private static final String TYPE_REFRESH = "refresh";
 
-    private final SecretKey secretKey;
-    private final JwtParser jwtParser;
+    private final SecretKey accessSecretKey;
+    private final SecretKey refreshSecretKey;
+    private final JwtParser accessJwtParser;
+    private final JwtParser refreshJwtParser;
     private final long accessTokenExpiration;
     private final long refreshTokenExpiration;
 
-    public JwtProvider(@Value("${jwt.secret}") String secret,
+    public JwtProvider(@Value("${jwt.access-token-secret}") String accessSecret,
+                       @Value("${jwt.refresh-token-secret}") String refreshSecret,
                        @Value("${jwt.access-token-expiration}") long accessTokenExpiration,
                        @Value("${jwt.refresh-token-expiration}") long refreshTokenExpiration) {
-        this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
-        this.jwtParser = Jwts.parser().verifyWith(secretKey).build();
+        this.accessSecretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(accessSecret));
+        this.refreshSecretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(refreshSecret));
+        this.accessJwtParser = Jwts.parser().verifyWith(accessSecretKey).build();
+        this.refreshJwtParser = Jwts.parser().verifyWith(refreshSecretKey).build();
         this.accessTokenExpiration = accessTokenExpiration;
         this.refreshTokenExpiration = refreshTokenExpiration;
     }
@@ -49,11 +54,11 @@ public class JwtProvider {
                 .claim(TYPE_CLAIM, TYPE_ACCESS)
                 .issuedAt(now)
                 .expiration(expiry)
-                .signWith(secretKey)
+                .signWith(accessSecretKey)
                 .compact();
     }
 
-    public String createRefreshToken(Long userId){
+    public String createRefreshToken(Long userId) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + refreshTokenExpiration);
 
@@ -62,21 +67,23 @@ public class JwtProvider {
                 .claim(TYPE_CLAIM, TYPE_REFRESH)
                 .issuedAt(now)
                 .expiration(expiry)
-                .signWith(secretKey)
+                .signWith(refreshSecretKey)
                 .compact();
     }
 
     public Optional<TokenClaims> parseToken(String token) {
-        return parseClaims(token).filter(claims -> claims.get(TYPE_CLAIM, String.class).equals(TYPE_ACCESS))
-                    .map(this::toTokenClaims);
+        return parseClaims(accessJwtParser, token)
+                .filter(claims -> TYPE_ACCESS.equals(claims.get(TYPE_CLAIM, String.class)))
+                .map(this::toTokenClaims);
     }
 
     public Optional<Long> parseRefreshToken(String token) {
-        return parseClaims(token).filter(claims -> claims.get(TYPE_CLAIM, String.class).equals(TYPE_REFRESH))
+        return parseClaims(refreshJwtParser, token)
+                .filter(claims -> TYPE_REFRESH.equals(claims.get(TYPE_CLAIM, String.class)))
                 .map(claims -> Long.valueOf(claims.getSubject()));
     }
 
-    private Optional<Claims> parseClaims(String token){
+    private Optional<Claims> parseClaims(JwtParser jwtParser, String token) {
         try {
             Claims claims = jwtParser.parseSignedClaims(token).getPayload();
             return Optional.of(claims);

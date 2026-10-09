@@ -1,19 +1,26 @@
 package com.firstgrab.global.jwt;
 
 import com.firstgrab.domain.user.entity.Role;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.io.Encoders;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import javax.crypto.SecretKey;
+import java.util.Date;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class JwtProviderTest {
 
-    private static final String SECRET =
-            Encoders.BASE64.encode("test-secret-key-for-jwt-provider-test".getBytes());
+    private static final String ACCESS_SECRET =
+            Encoders.BASE64.encode("access-secret-key-for-jwt-provider-test".getBytes());
+    private static final String REFRESH_SECRET =
+            Encoders.BASE64.encode("refresh-secret-key-for-jwt-provider-test".getBytes());
     private static final String OTHER_SECRET =
             Encoders.BASE64.encode("other-secret-key-for-jwt-provider-test".getBytes());
     private static final long EXPIRATION = 3_600_000L;
@@ -25,7 +32,7 @@ class JwtProviderTest {
 
     @BeforeEach
     void setUp() {
-        jwtProvider = new JwtProvider(SECRET, EXPIRATION, REFRESH_EXPIRATION);
+        jwtProvider = new JwtProvider(ACCESS_SECRET, REFRESH_SECRET, EXPIRATION, REFRESH_EXPIRATION);
     }
 
     @Test
@@ -41,7 +48,7 @@ class JwtProviderTest {
     @Test
     @DisplayName("만료된 토큰이면 empty를 반환")
     void parseExpired() {
-        JwtProvider expiredProvider = new JwtProvider(SECRET, -1000L, REFRESH_EXPIRATION);
+        JwtProvider expiredProvider = new JwtProvider(ACCESS_SECRET, REFRESH_SECRET, -1000L, REFRESH_EXPIRATION);
         String token = expiredProvider.createAccessToken(USER_ID, ROLE);
 
         assertThat(jwtProvider.parseToken(token)).isEmpty();
@@ -50,7 +57,7 @@ class JwtProviderTest {
     @Test
     @DisplayName("다른 키로 서명한 토큰이면 empty를 반환")
     void parseInvalidSignature() {
-        JwtProvider otherProvider = new JwtProvider(OTHER_SECRET, EXPIRATION, REFRESH_EXPIRATION);
+        JwtProvider otherProvider = new JwtProvider(OTHER_SECRET, REFRESH_SECRET, EXPIRATION, REFRESH_EXPIRATION);
         String token = otherProvider.createAccessToken(USER_ID, ROLE);
 
         assertThat(jwtProvider.parseToken(token)).isEmpty();
@@ -70,7 +77,7 @@ class JwtProviderTest {
     }
 
     @Test
-    @DisplayName("jwt 토큰 생성 후 파싱 성공")
+    @DisplayName("refresh jwt 토큰 생성 후 파싱 성공")
     void parseRefreshTokenSuccess() {
         String token = jwtProvider.createRefreshToken(USER_ID);
 
@@ -97,5 +104,30 @@ class JwtProviderTest {
         Optional<Long> userId = jwtProvider.parseRefreshToken(token);
 
         assertThat(userId).isEmpty();
+    }
+
+    @Test
+    @DisplayName("type claim이 없는 access 키 토큰이면 parseToken은 empty를 반환")
+    void parseTokenWithoutTypeClaim() {
+        String token = createTokenWithoutType(ACCESS_SECRET);
+
+        assertThat(jwtProvider.parseToken(token)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("type claim이 없는 refresh 키 토큰이면 parseRefreshToken은 empty를 반환")
+    void parseRefreshTokenWithoutTypeClaim() {
+        String token = createTokenWithoutType(REFRESH_SECRET);
+
+        assertThat(jwtProvider.parseRefreshToken(token)).isEmpty();
+    }
+
+    private String createTokenWithoutType(String secret) {
+        SecretKey secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+        return Jwts.builder()
+                .subject(String.valueOf(USER_ID))
+                .expiration(new Date(System.currentTimeMillis() + EXPIRATION))
+                .signWith(secretKey)
+                .compact();
     }
 }
