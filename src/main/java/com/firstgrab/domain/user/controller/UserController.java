@@ -1,7 +1,10 @@
 package com.firstgrab.domain.user.controller;
 
+import com.firstgrab.domain.user.controller.dto.LoginRequestDTO;
+import com.firstgrab.domain.user.controller.dto.LoginResponseDTO;
 import com.firstgrab.domain.user.controller.dto.SignupRequestDTO;
 import com.firstgrab.domain.user.service.UserService;
+import com.firstgrab.domain.user.service.dto.LoginResult;
 import com.firstgrab.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +26,13 @@ public class UserController {
     public ResponseEntity<ApiResponse<Void>> signup(@Valid @RequestBody SignupRequestDTO signupRequestDTO) {
         userService.signup(signupRequestDTO.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.of(201, ApiResponse.SIGNUP_SUCCESS, null));
+                .body(ApiResponse.of(HttpStatus.CREATED.value(), ApiResponse.SIGNUP_SUCCESS, null));
     }
 
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<LoginResponseDTO>> login(@Valid @RequestBody LoginRequestDTO loginRequestDTO) {
+        LoginResult loginResult = userService.login(loginRequestDTO.toCommand());
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.of(HttpStatus.OK.value(), ApiResponse.LOGIN_SUCCESS, LoginResponseDTO.from(loginResult)));
+    }
 }
