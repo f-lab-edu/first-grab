@@ -21,9 +21,9 @@ public class RefreshTokenRepository {
         this.refreshTokenExpiration = refreshTokenExpiration;
     }
 
-    public void save(Long userId, String refreshToken) {
+    public void save(Long userId, String hashedRefreshToken) {
         stringRedisTemplate.opsForValue()
-                .set(createKey(userId), refreshToken, refreshTokenExpiration);
+                .set(createKey(userId), hashedRefreshToken, refreshTokenExpiration);
     }
 
     public Optional<String> findByUserId(Long userId) {

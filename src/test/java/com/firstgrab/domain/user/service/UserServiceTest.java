@@ -9,6 +9,7 @@ import com.firstgrab.domain.user.service.dto.SignupCommand;
 import com.firstgrab.global.exception.DuplicateException;
 import com.firstgrab.global.exception.UnauthorizedException;
 import com.firstgrab.global.jwt.JwtProvider;
+import com.firstgrab.global.jwt.RefreshTokenHasher;
 import com.firstgrab.global.jwt.RefreshTokenRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ public class UserServiceTest {
     private static final String ENCODED_PASSWORD = "encodedPassword";
     private static final String ACCESS_TOKEN = "accessToken";
     private static final String REFRESH_TOKEN = "refreshToken";
+    private static final String HASHED_REFRESH_TOKEN = "hashedRefreshToken";
 
     @InjectMocks
     private UserService userService;
@@ -52,6 +54,9 @@ public class UserServiceTest {
 
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
+
+    @Mock
+    private RefreshTokenHasher refreshTokenHasher;
 
     @Test
     @DisplayName("회원가입 성공")
@@ -86,13 +91,14 @@ public class UserServiceTest {
         when(passwordEncoder.matches(RAW_PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
         when(jwtProvider.createAccessToken(user.getId(), Role.USER)).thenReturn(ACCESS_TOKEN);
         when(jwtProvider.createRefreshToken(user.getId())).thenReturn(REFRESH_TOKEN);
+        when(refreshTokenHasher.hash(REFRESH_TOKEN)).thenReturn(HASHED_REFRESH_TOKEN);
 
         LoginResult result = userService.login(new LoginCommand(EMAIL, RAW_PASSWORD));
 
         assertThat(result.getAccessToken()).isEqualTo(ACCESS_TOKEN);
         assertThat(result.getRefreshToken()).isEqualTo(REFRESH_TOKEN);
 
-        verify(refreshTokenRepository).save(user.getId(), REFRESH_TOKEN);
+        verify(refreshTokenRepository).save(user.getId(), HASHED_REFRESH_TOKEN);
     }
 
     @Test
