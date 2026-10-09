@@ -78,7 +78,6 @@ public class UserService {
         }
     }
 
-    @Transactional(readOnly = true)
     public String reissue(String refreshToken) {
         Long userId = getUserIdFromRefreshToken(refreshToken);
         validateStoredRefreshToken(userId, refreshToken);
@@ -94,8 +93,9 @@ public class UserService {
     }
 
     private void validateStoredRefreshToken(Long userId, String refreshToken) {
+        String hashedRefreshToken = refreshTokenHasher.hash(refreshToken);
         refreshTokenRepository.findByUserId(userId)
-                .filter(token -> token.equals(refreshToken))
+                .filter(token -> token.equals(hashedRefreshToken))
                 .orElseThrow(() -> new UnauthorizedException(INVALID_REFRESH_TOKEN));
     }
 

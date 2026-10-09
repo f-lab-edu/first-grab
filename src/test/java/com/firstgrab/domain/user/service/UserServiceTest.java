@@ -145,12 +145,13 @@ public class UserServiceTest {
 
     @Test
     @DisplayName("accessToken 재발급 성공")
-    void reissueSuccess(){
+    void reissueSuccess() {
         User user = User.createUser(EMAIL, ENCODED_PASSWORD, NAME);
         when(jwtProvider.parseRefreshToken(REFRESH_TOKEN)).thenReturn(Optional.of(USER_ID));
-        when(refreshTokenRepository.findByUserId(USER_ID)).thenReturn(Optional.of(REFRESH_TOKEN));
+        when(refreshTokenHasher.hash(REFRESH_TOKEN)).thenReturn(HASHED_REFRESH_TOKEN);
+        when(refreshTokenRepository.findByUserId(USER_ID)).thenReturn(Optional.of(HASHED_REFRESH_TOKEN));
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-        when(jwtProvider.createAccessToken(USER_ID,Role.USER)).thenReturn(ACCESS_TOKEN);
+        when(jwtProvider.createAccessToken(USER_ID, Role.USER)).thenReturn(ACCESS_TOKEN);
 
         String accessToken = userService.reissue(REFRESH_TOKEN);
 
@@ -159,7 +160,7 @@ public class UserServiceTest {
 
     @Test
     @DisplayName("refresh token 파싱 실패")
-    void reissueInvalidToken(){
+    void reissueInvalidToken() {
         when(jwtProvider.parseRefreshToken(REFRESH_TOKEN)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> userService.reissue(REFRESH_TOKEN))
@@ -171,7 +172,7 @@ public class UserServiceTest {
 
     @Test
     @DisplayName("refreshToken이 redis에 저장되지 않았을 때")
-    void reissueTokenNotStored(){
+    void reissueTokenNotStored() {
         when(jwtProvider.parseRefreshToken(REFRESH_TOKEN)).thenReturn(Optional.of(USER_ID));
         when(refreshTokenRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
 
@@ -184,9 +185,10 @@ public class UserServiceTest {
 
     @Test
     @DisplayName("refreshToken이 redis 값과 일치하지 않았을 때")
-    void reissueTokenMismatch(){
+    void reissueTokenMismatch() {
         when(jwtProvider.parseRefreshToken(REFRESH_TOKEN)).thenReturn(Optional.of(USER_ID));
         when(refreshTokenRepository.findByUserId(USER_ID)).thenReturn(Optional.of("INVALID_TOKEN"));
+        when(refreshTokenHasher.hash(REFRESH_TOKEN)).thenReturn(HASHED_REFRESH_TOKEN);
 
         assertThatThrownBy(() -> userService.reissue(REFRESH_TOKEN))
                 .isInstanceOf(UnauthorizedException.class)
@@ -197,10 +199,11 @@ public class UserServiceTest {
 
     @Test
     @DisplayName("탈퇴한 유저의 토큰 재발행")
-    void reissueDeletedUser(){
+    void reissueDeletedUser() {
         User user = mock(User.class);
         when(jwtProvider.parseRefreshToken(REFRESH_TOKEN)).thenReturn(Optional.of(USER_ID));
-        when(refreshTokenRepository.findByUserId(USER_ID)).thenReturn(Optional.of(REFRESH_TOKEN));
+        when(refreshTokenHasher.hash(REFRESH_TOKEN)).thenReturn(HASHED_REFRESH_TOKEN);
+        when(refreshTokenRepository.findByUserId(USER_ID)).thenReturn(Optional.of(HASHED_REFRESH_TOKEN));
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
         when(user.getDeletedAt()).thenReturn(LocalDateTime.now());
 
@@ -212,12 +215,52 @@ public class UserServiceTest {
 
     @Test
     @DisplayName("logout 성공")
-    void logoutSuccess(){
+    void logoutSuccess() {
         when(jwtProvider.parseRefreshToken(REFRESH_TOKEN)).thenReturn(Optional.of(USER_ID));
-        when(refreshTokenRepository.findByUserId(USER_ID)).thenReturn(Optional.of(REFRESH_TOKEN));
+        when(refreshTokenHasher.hash(REFRESH_TOKEN)).thenReturn(HASHED_REFRESH_TOKEN);
+        when(refreshTokenRepository.findByUserId(USER_ID)).thenReturn(Optional.of(HASHED_REFRESH_TOKEN));
 
         userService.logout(REFRESH_TOKEN);
 
         verify(refreshTokenRepository).deleteByUserId(USER_ID);
+    }
+
+    @Test
+    @DisplayName("유효하지 않은 refresh token으로 로그아웃")
+    void logoutInvalidToken() {
+        when(jwtProvider.parseRefreshToken(REFRESH_TOKEN)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.logout(REFRESH_TOKEN))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessage(INVALID_REFRESH_TOKEN);
+
+        verifyNoInteractions(refreshTokenRepository);
+    }
+
+    @Test
+    @DisplayName("Redis에 저장되지 않은 refresh token으로 로그아웃")
+    void logoutTokenNotStored() {
+        when(jwtProvider.parseRefreshToken(REFRESH_TOKEN)).thenReturn(Optional.of(USER_ID));
+        when(refreshTokenRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.logout(REFRESH_TOKEN))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessage(INVALID_REFRESH_TOKEN);
+
+        verify(refreshTokenRepository, never()).deleteByUserId(any());
+    }
+
+    @Test
+    @DisplayName("Redis 저장값과 일치하지 않는 refresh token으로 로그아웃")
+    void logoutTokenMismatch() {
+        when(jwtProvider.parseRefreshToken(REFRESH_TOKEN)).thenReturn(Optional.of(USER_ID));
+        when(refreshTokenHasher.hash(REFRESH_TOKEN)).thenReturn(HASHED_REFRESH_TOKEN);
+        when(refreshTokenRepository.findByUserId(USER_ID)).thenReturn(Optional.of("INVALID_TOKEN"));
+
+        assertThatThrownBy(() -> userService.logout(REFRESH_TOKEN))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessage(INVALID_REFRESH_TOKEN);
+
+        verify(refreshTokenRepository, never()).deleteByUserId(any());
     }
 }
