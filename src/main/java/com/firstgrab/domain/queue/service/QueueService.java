@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 
 import static com.firstgrab.global.exception.ErrorMessage.EVENT_NOT_FOUND;
 import static com.firstgrab.global.exception.ErrorMessage.EVENT_NOT_OPEN;
+import static com.firstgrab.global.exception.ErrorMessage.NOT_IN_QUEUE;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -69,5 +70,17 @@ public class QueueService {
             return 5;
         }
         return 10;
+    }
+
+    public QueueEntryResult getPosition(Long eventId, Long userId) {
+        long position = getQueuePosition(eventId, userId);
+        int pollIntervalSeconds = calculatePollInterval(position);
+        return new QueueEntryResult(position, pollIntervalSeconds);
+    }
+
+    private long getQueuePosition(Long eventId, Long userId) {
+        long rank = queueRepository.findRank(eventId, userId)
+                .orElseThrow(() -> new NotFoundException(NOT_IN_QUEUE));
+        return rank + 1;
     }
 }

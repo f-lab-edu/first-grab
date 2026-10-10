@@ -19,10 +19,13 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static com.firstgrab.global.exception.ErrorMessage.EVENT_NOT_FOUND;
 import static com.firstgrab.global.exception.ErrorMessage.EVENT_NOT_OPEN;
+import static com.firstgrab.global.exception.ErrorMessage.NOT_IN_QUEUE;
 import static com.firstgrab.global.exception.ErrorMessage.UNAUTHORIZED_ACCESS;
 import static com.firstgrab.global.response.ApiResponse.QUEUE_ENTER_SUCCESS;
+import static com.firstgrab.global.response.ApiResponse.QUEUE_POSITION_SUCCESS;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -95,5 +98,33 @@ public class QueueControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").value(EVENT_NOT_OPEN));
+    }
+
+    @Test
+    @WithMockUserId
+    @DisplayName("대기 순번 조회 성공")
+    void getPositionSuccess() throws Exception {
+        when(queueService.getPosition(EVENT_ID, USER_ID))
+                .thenReturn(new QueueEntryResult(1L, 1));
+
+        mockMvc.perform(get("/api/events/{eventId}/queue", EVENT_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value(QUEUE_POSITION_SUCCESS))
+                .andExpect(jsonPath("$.data.position").value(1))
+                .andExpect(jsonPath("$.data.pollIntervalSeconds").value(1));
+    }
+
+    @Test
+    @WithMockUserId
+    @DisplayName("대기열에 없으면 404")
+    void getPositionNotInQueue() throws Exception {
+        when(queueService.getPosition(EVENT_ID, USER_ID))
+                .thenThrow(new NotFoundException(NOT_IN_QUEUE));
+
+        mockMvc.perform(get("/api/events/{eventId}/queue", EVENT_ID))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value(NOT_IN_QUEUE));
     }
 }

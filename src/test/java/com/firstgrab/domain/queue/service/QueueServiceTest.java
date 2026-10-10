@@ -21,6 +21,7 @@ import java.util.Optional;
 
 import static com.firstgrab.global.exception.ErrorMessage.EVENT_NOT_FOUND;
 import static com.firstgrab.global.exception.ErrorMessage.EVENT_NOT_OPEN;
+import static com.firstgrab.global.exception.ErrorMessage.NOT_IN_QUEUE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
@@ -89,6 +90,27 @@ public class QueueServiceTest {
                 .hasMessage(EVENT_NOT_OPEN);
 
         verifyNoInteractions(queueRepository);
+    }
+
+    @Test
+    @DisplayName("대기 순번 조회 성공")
+    void getPositionSuccess() {
+        when(queueRepository.findRank(EVENT_ID, USER_ID)).thenReturn(Optional.of(0L));
+
+        QueueEntryResult queueEntryResult = queueService.getPosition(EVENT_ID, USER_ID);
+
+        assertThat(queueEntryResult.getPosition()).isEqualTo(1L);
+        assertThat(queueEntryResult.getPollIntervalSeconds()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("대기열에 없으면 조회 실패")
+    void getPositionNotInQueue() {
+        when(queueRepository.findRank(EVENT_ID, USER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> queueService.getPosition(EVENT_ID, USER_ID))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessage(NOT_IN_QUEUE);
     }
 
     private Event openEvent() {
