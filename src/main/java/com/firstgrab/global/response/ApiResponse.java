@@ -9,6 +9,7 @@ public class ApiResponse<T> {
     public static final String LOGIN_SUCCESS = "로그인이 완료되었습니다.";
     public static final String REISSUE_SUCCESS = "토큰이 재발급되었습니다.";
     public static final String LOGOUT_SUCCESS = "로그아웃이 완료되었습니다.";
+    public static final String QUEUE_ENTER_SUCCESS = "대기열에 진입했습니다.";
 
     private int status;
     private String message;
