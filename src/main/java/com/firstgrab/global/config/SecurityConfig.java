@@ -1,5 +1,6 @@
 package com.firstgrab.global.config;
 
+import com.firstgrab.domain.user.entity.Role;
 import com.firstgrab.global.jwt.JwtAuthenticationFilter;
 import com.firstgrab.global.jwt.JwtProvider;
 import com.firstgrab.global.security.CustomAccessDeniedHandler;
@@ -7,6 +8,7 @@ import com.firstgrab.global.security.CustomAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -35,6 +37,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/events").hasRole(Role.ADMIN.name())
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception
