@@ -8,6 +8,8 @@ import com.firstgrab.domain.user.service.dto.SignupCommand;
 import com.firstgrab.global.exception.DuplicateException;
 import com.firstgrab.global.exception.UnauthorizedException;
 import com.firstgrab.global.jwt.JwtProvider;
+import com.firstgrab.global.jwt.RefreshTokenHasher;
+import com.firstgrab.global.jwt.RefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,6 +28,8 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenHasher refreshTokenHasher;
 
     @Transactional
     public void signup(SignupCommand signupCommand) {
@@ -43,15 +47,18 @@ public class UserService {
                 });
     }
 
-    @Transactional(readOnly = true)
     public LoginResult login(LoginCommand loginCommand) {
         User user = getLoginUser(loginCommand.getEmail());
         validateNotDeleted(user);
         validateMatchedPassword(loginCommand.getPassword(), user.getPassword());
 
         String accessToken = jwtProvider.createAccessToken(user.getId(), user.getRole());
+        String refreshToken = jwtProvider.createRefreshToken(user.getId());
+        String hashedRefreshToken = refreshTokenHasher.hash(refreshToken);
+        refreshTokenRepository.save(user.getId(), hashedRefreshToken);
+
         log.info("User logged in, userId={}", user.getId());
-        return new LoginResult(accessToken);
+        return new LoginResult(accessToken, refreshToken);
     }
 
     private User getLoginUser(String email) {
