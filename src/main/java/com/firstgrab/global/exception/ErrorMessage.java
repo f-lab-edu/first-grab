@@ -13,4 +13,5 @@ public class ErrorMessage {
     public static final String EVENT_NOT_FOUND = "존재하지 않는 이벤트입니다.";
     public static final String EVENT_NOT_OPEN = "진행 중이지 않습니다.";
     public static final String NOT_IN_QUEUE = "대기열에 진입하지 않은 사용자입니다.";
+    public static final String INVALID_EVENT_START_AT = "이벤트 시작 시간은 현재 이후여야 합니다.";
 }
