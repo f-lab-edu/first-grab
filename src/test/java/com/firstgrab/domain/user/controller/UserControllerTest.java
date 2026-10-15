@@ -18,6 +18,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
 import static com.firstgrab.global.exception.ErrorMessage.DUPLICATE_EMAIL;
+import static com.firstgrab.global.exception.ErrorMessage.INVALID_REFRESH_TOKEN;
+import static com.firstgrab.global.response.ApiResponse.LOGOUT_SUCCESS;
+import static com.firstgrab.global.response.ApiResponse.REISSUE_SUCCESS;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -137,5 +140,68 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.message").value("must not be blank"));
 
         verifyNoInteractions(userService);
+    }
+
+    @Test
+    @DisplayName("토큰 재발행 성공")
+    void reissueSuccess() throws Exception {
+        String json = """
+                {"refreshToken": "refreshToken"}
+                """;
+        when(userService.reissue(any(String.class))).thenReturn(ACCESS_TOKEN);
+
+        mockMvc.perform(post("/api/auth/reissue")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value(REISSUE_SUCCESS))
+                .andExpect(jsonPath("$.data.accessToken").value(ACCESS_TOKEN));
+    }
+
+    @Test
+    @DisplayName("토큰 재발행 실패")
+    void reissueUnauthorized() throws Exception {
+        String json = """
+                {"refreshToken": "invalidToken"}
+                """;
+        when(userService.reissue(any(String.class))).thenThrow(new UnauthorizedException(INVALID_REFRESH_TOKEN));
+
+        mockMvc.perform(post("/api/auth/reissue")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value(INVALID_REFRESH_TOKEN));
+    }
+
+    @Test
+    @DisplayName("빈 토큰으로 재발행 요청 시 실패")
+    void reissueBlankToken() throws Exception {
+        String json = """
+                {"refreshToken": ""}
+                """;
+
+        mockMvc.perform(post("/api/auth/reissue")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("must not be blank"));
+    }
+
+    @Test
+    @DisplayName("로그아웃 성공")
+    void logoutSuccess() throws Exception {
+        String json = """
+                {"refreshToken": "refreshToken"}
+                """;
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value(LOGOUT_SUCCESS));
     }
 }

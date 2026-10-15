@@ -8,4 +8,5 @@ public class ErrorMessage {
     public static final String INVALID_LOGIN = "이메일 또는 비밀번호가 올바르지 않습니다.";
     public static final String UNAUTHORIZED_ACCESS = "인증이 필요합니다.";
     public static final String FORBIDDEN = "권한이 없습니다.";
+    public static final String INVALID_REFRESH_TOKEN = "유효하지 않은 Refresh Token 입니다.";
 }
