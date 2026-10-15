@@ -4,6 +4,11 @@ spring:
   profiles:
     default: local
 
+  data:
+    redis:
+      timeout: 3s
+      connect-timeout: 2s
+
   jpa:
     hibernate:
       ddl-auto: validate
