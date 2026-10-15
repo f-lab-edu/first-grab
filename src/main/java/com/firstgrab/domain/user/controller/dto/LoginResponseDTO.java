@@ -9,9 +9,8 @@ import lombok.Getter;
 public class LoginResponseDTO {
 
     private final String accessToken;
-    private final String refreshToken;
 
     public static LoginResponseDTO from(LoginResult loginResult){
-        return new LoginResponseDTO(loginResult.getAccessToken(), loginResult.getRefreshToken());
+        return new LoginResponseDTO(loginResult.getAccessToken());
     }
 }

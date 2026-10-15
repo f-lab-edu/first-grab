@@ -32,9 +32,6 @@ import static com.firstgrab.global.exception.ErrorMessage.INVALID_LOGIN;
 @AutoConfigureMockMvc(addFilters = false)
 public class UserControllerTest {
 
-    private static final String ACCESS_TOKEN = "accessToken";
-    private static final String REFRESH_TOKEN = "refreshToken";
-
     @Autowired
     private MockMvc mockMvc;
 
@@ -94,7 +91,7 @@ public class UserControllerTest {
         String json = """
                 {"email": "test@test.com", "password": "12345678"}
                 """;
-        when(userService.login(any(LoginCommand.class))).thenReturn(new LoginResult(ACCESS_TOKEN, REFRESH_TOKEN));
+        when(userService.login(any(LoginCommand.class))).thenReturn(new LoginResult("accessToken"));
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -102,8 +99,7 @@ public class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.message").value(LOGIN_SUCCESS))
-                .andExpect(jsonPath("$.data.accessToken").value(ACCESS_TOKEN))
-                .andExpect(jsonPath("$.data.refreshToken").value(REFRESH_TOKEN));
+                .andExpect(jsonPath("$.data.accessToken").value("accessToken"));
     }
 
     @Test
