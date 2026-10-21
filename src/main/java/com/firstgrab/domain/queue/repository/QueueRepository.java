@@ -27,6 +27,6 @@ public class QueueRepository {
     }
 
     private String createKey(Long eventId) {
-        return KEY_PREFIX + eventId;
+        return KEY_PREFIX + "{" + eventId + "}";
     }
 }

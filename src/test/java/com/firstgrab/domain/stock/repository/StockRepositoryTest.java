@@ -34,8 +34,8 @@ public class StockRepositoryTest {
     private static final Long EVENT_ID = 1L;
     private static final Long USER_ID = 1L;
     private static final Duration TTL = Duration.ofHours(1);
-    private static final String STOCK_KEY = "stock:" + EVENT_ID;
-    private static final String ORDERED_KEY = "ordered:" + EVENT_ID;
+    private static final String STOCK_KEY = "stock:{" + EVENT_ID + "}";
+    private static final String ORDERED_KEY = "ordered:{" + EVENT_ID + "}";
 
     @Autowired
     private StockRepository stockRepository;

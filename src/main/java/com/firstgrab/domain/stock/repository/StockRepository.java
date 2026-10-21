@@ -43,10 +43,10 @@ public class StockRepository {
     }
 
     private String createStockKey(Long eventId) {
-        return STOCK_KEY_PREFIX + eventId;
+        return STOCK_KEY_PREFIX + "{" + eventId + "}";
     }
 
     private String createOrderKey(Long eventId) {
-        return ORDERED_KEY_PREFIX + eventId;
+        return ORDERED_KEY_PREFIX + "{" + eventId + "}";
     }
 }
