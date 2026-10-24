@@ -37,6 +37,7 @@ public class QueueServiceTest {
     private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 10, 10, 10, 30);
     private static final Instant NOW_INSTANT = NOW.atZone(ZONE).toInstant();
+    private static final Instant EXPIRE_AT = NOW.plusMinutes(90).atZone(ZONE).toInstant();
 
     @Mock
     private EventRepository eventRepository;
@@ -64,7 +65,7 @@ public class QueueServiceTest {
         assertThat(result.getPosition()).isEqualTo(1L);
         assertThat(result.getPollIntervalSeconds()).isEqualTo(1);
 
-        verify(queueRepository).addIfAbsent(EVENT_ID, USER_ID, NOW_INSTANT.toEpochMilli());
+        verify(queueRepository).addIfAbsent(EVENT_ID, USER_ID, NOW_INSTANT.toEpochMilli(), EXPIRE_AT);
     }
 
     @Test

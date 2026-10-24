@@ -3,6 +3,7 @@ package com.firstgrab.domain.queue.repository;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Optional;
 
 @Repository
@@ -16,9 +17,11 @@ public class QueueRepository {
         this.stringRedisTemplate = stringRedisTemplate;
     }
 
-    public void addIfAbsent(Long eventId, Long userId, long enteredAt) {
+    public void addIfAbsent(Long eventId, Long userId, long enteredAt, Instant expireAt) {
+        String key = createKey(eventId);
         stringRedisTemplate.opsForZSet()
-                .addIfAbsent(createKey(eventId), String.valueOf(userId), enteredAt);
+                .addIfAbsent(key, String.valueOf(userId), enteredAt);
+        stringRedisTemplate.expireAt(key, expireAt);
     }
 
     public Optional<Long> findRank(Long eventId, Long userId) {
@@ -27,6 +30,6 @@ public class QueueRepository {
     }
 
     private String createKey(Long eventId) {
-        return KEY_PREFIX + eventId;
+        return KEY_PREFIX + "{" + eventId + "}";
     }
 }
