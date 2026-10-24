@@ -163,4 +163,25 @@ public class StockRepositoryTest {
         Long ttl = stringRedisTemplate.getExpire(ORDERED_KEY);
         assertThat(ttl).isPositive().isLessThanOrEqualTo(TTL.toSeconds());
     }
+
+    @Test
+    @DisplayName("재고 초기화 성공")
+    void initSuccess() {
+        boolean result = stockRepository.init(EVENT_ID, 100, TTL);
+
+        assertThat(result).isTrue();
+        assertThat(stringRedisTemplate.opsForValue().get(STOCK_KEY)).isEqualTo("100");
+        assertThat(stringRedisTemplate.getExpire(STOCK_KEY)).isPositive();
+    }
+
+    @Test
+    @DisplayName("재고 키가 이미 있으면 덮어쓰지 않음")
+    void initAlreadyExists() {
+        stringRedisTemplate.opsForValue().set(STOCK_KEY, "100");
+
+        boolean result = stockRepository.init(EVENT_ID, 50, TTL);
+
+        assertThat(result).isFalse();
+        assertThat(stringRedisTemplate.opsForValue().get(STOCK_KEY)).isEqualTo("100");
+    }
 }

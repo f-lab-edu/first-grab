@@ -2,6 +2,7 @@ package com.firstgrab.domain.stock.repository;
 
 import com.firstgrab.domain.stock.StockDecreaseResult;
 import lombok.RequiredArgsConstructor;
+import org.reactivestreams.Publisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Repository;
@@ -26,6 +27,13 @@ public class StockRepository {
                 List.of(createStockKey(eventId), createOrderKey(eventId)),
                 String.valueOf(quantity), String.valueOf(userId), String.valueOf(ttl.toSeconds()));
         return StockDecreaseResult.fromCode(result);
+    }
+
+    public boolean init(Long eventId, int totalStock, Duration ttl) {
+        validateTtl(ttl);
+        Boolean saved = stringRedisTemplate.opsForValue().setIfAbsent(
+                createStockKey(eventId), String.valueOf(totalStock), ttl);
+        return Boolean.TRUE.equals(saved);
     }
 
     private void validateTtl(Duration ttl) {
