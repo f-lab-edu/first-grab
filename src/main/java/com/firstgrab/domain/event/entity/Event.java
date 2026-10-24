@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 import static com.firstgrab.global.exception.ErrorMessage.INVALID_EVENT_PERIOD;
+import static com.firstgrab.global.exception.ErrorMessage.INVALID_EVENT_START_AT;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -57,15 +58,22 @@ public class Event extends BaseEntity {
         this.endAt = endAt;
     }
 
-    public static Event createEvent(String name, long price, int totalStock,
-                                    int perUserLimit, LocalDateTime startAt, LocalDateTime endAt) {
+    public static Event createEvent(String name, long price, int totalStock, int perUserLimit,
+                                    LocalDateTime startAt, LocalDateTime endAt, LocalDateTime currentAt) {
         validatePeriod(startAt, endAt);
+        validateStartAt(startAt, currentAt);
         return new Event(name, price, totalStock, perUserLimit, startAt, endAt);
     }
 
     private static void validatePeriod(LocalDateTime startAt, LocalDateTime endAt) {
         if (!startAt.isBefore(endAt)) {
             throw new BadRequestException(INVALID_EVENT_PERIOD);
+        }
+    }
+
+    private static void validateStartAt(LocalDateTime startAt, LocalDateTime currentAt) {
+        if (startAt.isBefore(currentAt)) {
+            throw new BadRequestException(INVALID_EVENT_START_AT);
         }
     }
 

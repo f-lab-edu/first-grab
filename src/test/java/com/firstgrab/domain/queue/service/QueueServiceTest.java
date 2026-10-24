@@ -115,11 +115,11 @@ public class QueueServiceTest {
 
     private Event openEvent() {
         return Event.createEvent("test event", 100_000L, 100, 1,
-                NOW.minusMinutes(30), NOW.plusMinutes(30));
+                NOW.minusMinutes(30), NOW.plusMinutes(30), NOW.minusHours(1));
     }
 
     private Event notStartedEvent() {
         return Event.createEvent("test event", 100_000L, 100, 1,
-                NOW.plusHours(1), NOW.plusHours(2));
+                NOW.plusHours(1), NOW.plusHours(2), NOW);
     }
 }

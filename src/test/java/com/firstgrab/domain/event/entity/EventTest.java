@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 
 import static com.firstgrab.global.exception.ErrorMessage.INVALID_EVENT_PERIOD;
+import static com.firstgrab.global.exception.ErrorMessage.INVALID_EVENT_START_AT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -19,6 +20,7 @@ public class EventTest {
     private static final int PER_USER_LIMIT = 1;
     private static final LocalDateTime START_AT = LocalDateTime.of(2026, 10, 10, 10, 0);
     private static final LocalDateTime END_AT = START_AT.plusHours(1);
+    private static final LocalDateTime CURRENT_AT = START_AT.minusHours(1);
 
     @Test
     @DisplayName("이벤트 생성 성공")
@@ -32,7 +34,7 @@ public class EventTest {
     @Test
     @DisplayName("시작 시각과 종료 시각이 같으면 이벤트 생성 실패")
     void createEventInvalidPeriod() {
-        assertThatThrownBy(() -> Event.createEvent(NAME, PRICE, TOTAL_STOCK, PER_USER_LIMIT, START_AT, START_AT))
+        assertThatThrownBy(() -> Event.createEvent(NAME, PRICE, TOTAL_STOCK, PER_USER_LIMIT, START_AT, START_AT, CURRENT_AT))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage(INVALID_EVENT_PERIOD);
     }
@@ -53,7 +55,16 @@ public class EventTest {
         assertThat(event.isOpen(END_AT)).isFalse();
     }
 
+    @Test
+    @DisplayName("시작 시각이 현재보다 과거면 이벤트 생성 실패")
+    void createEventStartAtInPast() {
+        assertThatThrownBy(() -> Event.createEvent(NAME, PRICE, TOTAL_STOCK, PER_USER_LIMIT,
+                START_AT, END_AT, START_AT.plusHours(1)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage(INVALID_EVENT_START_AT);
+    }
+
     private Event createEvent() {
-        return Event.createEvent(NAME, PRICE, TOTAL_STOCK, PER_USER_LIMIT, START_AT, END_AT);
+        return Event.createEvent(NAME, PRICE, TOTAL_STOCK, PER_USER_LIMIT, START_AT, END_AT, CURRENT_AT);
     }
 }

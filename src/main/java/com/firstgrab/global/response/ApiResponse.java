@@ -11,6 +11,7 @@ public class ApiResponse<T> {
     public static final String LOGOUT_SUCCESS = "로그아웃이 완료되었습니다.";
     public static final String QUEUE_ENTER_SUCCESS = "대기열에 진입했습니다.";
     public static final String QUEUE_POSITION_SUCCESS = "대기 순번 조회가 완료되었습니다.";
+    public static final String EVENT_REGISTER_SUCCESS = "이벤트가 등록되었습니다.";
 
     private int status;
     private String message;
