@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 
@@ -23,6 +24,8 @@ import static com.firstgrab.global.exception.ErrorMessage.NOT_IN_QUEUE;
 @Service
 public class QueueService {
 
+    private static final Duration QUEUE_TTL_BUFFER = Duration.ofHours(1);
+
     private final Clock clock;
     private final EventRepository eventRepository;
     private final QueueRepository queueRepository;
@@ -32,8 +35,9 @@ public class QueueService {
 
         Event event = findEvent(eventId);
         validateOpen(event, LocalDateTime.ofInstant(now, clock.getZone()));
+        Instant expireAt = event.getEndAt().plus(QUEUE_TTL_BUFFER).atZone(clock.getZone()).toInstant();
 
-        queueRepository.addIfAbsent(eventId, userId, now.toEpochMilli());
+        queueRepository.addIfAbsent(eventId, userId, now.toEpochMilli(), expireAt);
         long position = findPosition(eventId, userId);
         int pollIntervalSeconds = calculatePollInterval(position);
 
