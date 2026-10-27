@@ -21,6 +21,14 @@ spring:
         request.timeout.ms: 3000
         delivery.timeout.ms: 5000
 
+    consumer:
+      group-id: order-processor
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      ack-mode: record
+
   jpa:
     hibernate:
       ddl-auto: validate
