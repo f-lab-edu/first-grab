@@ -40,6 +40,9 @@ public class Event extends BaseEntity {
     private int perUserLimit;
 
     @Column(nullable = false)
+    private int sold;
+
+    @Column(nullable = false)
     private LocalDateTime startAt;
 
     @Column(nullable = false)
