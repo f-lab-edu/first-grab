@@ -28,6 +28,7 @@ spring:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     listener:
       ack-mode: record
+      concurrency: 3
 
   jpa:
     hibernate:
@@ -44,3 +45,7 @@ jwt:
   access-token-expiration: 1800000
   refresh-token-expiration: 1209600000
 
+kafka-retry:
+  initial-interval-ms: 1000
+  max-interval-ms: 30000
+  max-retries: 8
