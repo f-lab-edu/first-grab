@@ -17,4 +17,6 @@ public interface EventRepository extends JpaRepository<Event, Long> {
               AND e.sold + :quantity <= e.totalStock
             """)
     int increaseSoldIfAvailable(@Param("eventId") Long eventId, @Param("quantity") int quantity);
+
+    boolean existsByIdAndDeletedAtIsNull(Long id);
 }
