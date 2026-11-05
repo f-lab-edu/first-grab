@@ -65,6 +65,7 @@ class OrderServiceTest {
         OrderRequested message = new OrderRequested(ORDER_ID, EVENT_ID, USER_ID, QUANTITY);
         when(orderRepository.existsByOrderId(ORDER_ID)).thenReturn(false);
         when(eventRepository.increaseSoldIfAvailable(EVENT_ID, QUANTITY)).thenReturn(0);
+        when(eventRepository.existsByIdAndDeletedAtIsNull(EVENT_ID)).thenReturn(true);
 
         OrderResult result = orderService.placeOrder(message);
 

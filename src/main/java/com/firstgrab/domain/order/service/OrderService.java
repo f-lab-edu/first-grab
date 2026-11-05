@@ -34,7 +34,7 @@ public class OrderService {
             orderRepository.save(Order.failed(
                     message.orderId(), message.eventId(),
                     message.userId(), message.quantity()));
-            log.warn("Order failed, insufficient stock, orderId={}, eventId={}", message.orderId(), message.eventId());
+            logFailureReason(message);
             return OrderResult.FAILED;
         }
 
@@ -48,5 +48,15 @@ public class OrderService {
         if (quantity <= 0) {
             throw new InvalidOrderMessageException(orderId, quantity);
         }
+    }
+
+    private void logFailureReason(OrderRequested message) {
+        if (eventRepository.existsByIdAndDeletedAtIsNull(message.eventId())) {
+            log.warn("Order failed, insufficient stock, orderId={}, eventId={}",
+                    message.orderId(), message.eventId());
+            return;
+        }
+        log.warn("Order failed, event not found or deleted, orderId={}, eventId={},",
+                message.orderId(), message.eventId());
     }
 }
