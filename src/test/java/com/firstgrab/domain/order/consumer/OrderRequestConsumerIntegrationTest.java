@@ -4,6 +4,7 @@ import com.firstgrab.domain.order.message.OrderRequested;
 import com.firstgrab.domain.order.service.OrderResult;
 import com.firstgrab.domain.order.service.OrderService;
 import com.firstgrab.global.config.KafkaConsumerConfig;
+import com.firstgrab.global.config.KafkaProducerConfig;
 import com.firstgrab.global.config.KafkaTopicConfig;
 import com.firstgrab.global.exception.InvalidOrderMessageException;
 import com.firstgrab.support.KafkaContainerConfig;
@@ -50,10 +51,16 @@ import static org.mockito.Mockito.when;
         ServiceConnectionAutoConfiguration.class,
         KafkaAutoConfiguration.class,
         KafkaTopicConfig.class,
+        KafkaProducerConfig.class,
         KafkaConsumerConfig.class,
         OrderRequestConsumer.class,
-        OrderDltConsumer.class
-})
+        OrderDltConsumer.class},
+        properties = {
+        "kafka-retry.initial-interval-ms=100",
+        "kafka-retry.max-interval-ms=100",
+        "kafka-retry.max-retries=3"
+        }
+)
 @Import(KafkaContainerConfig.class)
 public class OrderRequestConsumerIntegrationTest {
 

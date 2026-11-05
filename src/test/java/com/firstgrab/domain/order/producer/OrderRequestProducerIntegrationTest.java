@@ -1,6 +1,7 @@
 package com.firstgrab.domain.order.producer;
 
 import com.firstgrab.domain.order.message.OrderRequested;
+import com.firstgrab.global.config.KafkaProducerConfig;
 import com.firstgrab.global.config.KafkaTopicConfig;
 import com.firstgrab.support.KafkaContainerConfig;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -31,7 +32,8 @@ import static org.assertj.core.api.Assertions.assertThat;
         KafkaTopicConfig.class,
         OrderRequestProducer.class
 })
-@Import(KafkaContainerConfig.class)
+@Import({KafkaContainerConfig.class,
+        KafkaProducerConfig.class})
 public class OrderRequestProducerIntegrationTest {
 
     private static final String ORDER_ID = "order-1";
