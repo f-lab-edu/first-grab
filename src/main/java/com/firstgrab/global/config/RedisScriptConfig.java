@@ -9,7 +9,7 @@ import org.springframework.data.redis.core.script.RedisScript;
 public class RedisScriptConfig {
 
     @Bean
-    public RedisScript<Long> stockDecrementScript() {
-        return RedisScript.of(new ClassPathResource("scripts/stock_decrement.lua"), Long.class);
+    public RedisScript<Long> orderReserveScript() {
+        return RedisScript.of(new ClassPathResource("scripts/order_reserve.lua"), Long.class);
     }
 }
